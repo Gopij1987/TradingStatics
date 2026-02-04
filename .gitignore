@@ -1,0 +1,19 @@
+# Sample data files
+*.csv
+*.xlsx
+*.xls
+*.pdf
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Backup files
+*.bak
+*~
