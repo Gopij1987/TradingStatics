@@ -43,19 +43,73 @@
         }
         .input-section {
             background: white;
-            border-radius: 12px;
-            padding: 18px 20px;
-            margin-bottom: 18px;
+            border-radius: 10px;
+            padding: 12px 14px;
+            margin-bottom: 12px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.05);
             border: 1px solid #e2e8f0;
         }
         .filter-section {
             background: white;
             border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 18px;
+            padding: 4px 6px;
+            margin-bottom: 8px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.05);
             border: 1px solid #e2e8f0;
+            position: sticky;
+            top: 6px;
+            z-index: 100;
+        }
+        .pnl-type-bar {
+            background: white;
+            border-radius: 10px;
+            padding: 6px 8px;
+            margin-bottom: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border: 1px solid #e2e8f0;
+        }
+        .floating-banner {
+            position: fixed !important;
+            top: 12px;
+            right: 12px;
+            z-index: 200;
+            background: linear-gradient(135deg, #f59e0b 0%, #f97316 45%, #ef4444 100%);
+            border: 1px solid #fb7185;
+            color: #fff;
+            border-radius: 12px;
+            padding: 8px 12px;
+            font-size: 0.75rem;
+            box-shadow: 0 0 12px rgba(249,115,22,0.6), 0 6px 16px rgba(0,0,0,0.15);
+            max-width: 230px;
+            text-align: center;
+            animation: bannerPulse 1.8s ease-in-out infinite;
+        }
+        .floating-banner strong {
+            display: block;
+            font-size: 0.85rem;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            color: #fff;
+        }
+        .floating-banner .banner-subtitle {
+            display: block;
+            font-size: 0.7rem;
+            opacity: 0.95;
+            margin-top: 2px;
+            line-height: 1.2;
+        }
+        .floating-banner .banner-highlight {
+            display: inline-block;
+            margin-top: 4px;
+            padding: 2px 6px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.18);
+            font-size: 0.68rem;
+            letter-spacing: 0.3px;
+        }
+        @keyframes bannerPulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 12px rgba(249,115,22,0.6), 0 6px 16px rgba(0,0,0,0.15); }
+            50% { transform: scale(1.03); box-shadow: 0 0 18px rgba(239,68,68,0.7), 0 10px 22px rgba(0,0,0,0.2); }
         }
         .section-card {
             background: white;
@@ -162,32 +216,47 @@
         }
         .summary-card {
             background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-            border-radius: 10px;
-            padding: 16px;
+            border-radius: 8px;
+            padding: 8px 6px;
             text-align: center;
             color: #1e3a8a;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            box-shadow: 0 1px 6px rgba(0,0,0,0.05);
             border: 1px solid #93c5fd;
+            min-height: 72px;
+        }
+        .summary-expense {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-color: #f59e0b;
+            color: #92400e;
+        }
+        .summary-net {
+            background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+            border-color: #22c55e;
+            color: #14532d;
         }
         .summary-card small {
             color: #1e3a8a;
             font-weight: 600;
+            font-size: 0.7rem;
+            line-height: 1.1;
         }
         .summary-card h3, .summary-card h5 {
             color: #1e40af;
-            margin: 10px 0;
+            margin: 4px 0;
+            font-size: 0.95rem;
+            line-height: 1.1;
         }
         .form-label {
             font-weight: 600;
             color: #1e40af;
-            margin-bottom: 6px;
-            font-size: 0.95rem;
+            margin-bottom: 4px;
+            font-size: 0.8rem;
         }
         .form-control {
             background: white;
             border: 1px solid #cbd5e1;
             border-radius: 8px;
-            padding: 10px;
+            padding: 8px 10px;
             color: #1e293b;
             transition: border-color 0.3s;
         }
@@ -199,13 +268,53 @@
         .btn-primary {
             background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
             border: none;
-            padding: 10px 30px;
+            padding: 8px 22px;
             font-weight: 600;
             border-radius: 8px;
             color: white;
             box-shadow: 0 2px 8px rgba(59,130,246,0.2);
             transition: all 0.3s;
         }
+                .filter-section .btn {
+                    padding: 2px 6px;
+                    font-size: 0.68rem;
+                    line-height: 1.1;
+                }
+                .filter-section .form-label {
+                    font-size: 12px;
+                    margin-bottom: 1px;
+                    text-align: center;
+                }
+                .filter-section .form-control {
+                    padding: 4px 6px;
+                    font-size: 0.72rem;
+                    height: 28px;
+                }
+                .summary-grid {
+                    display: grid;
+                    grid-template-columns: repeat(7, 1fr);
+                    gap: 6px;
+                }
+                @media (max-width: 1280px) {
+                    .summary-grid {
+                        grid-template-columns: repeat(7, minmax(90px, 1fr));
+                    }
+                }
+                @media (max-width: 992px) {
+                    .summary-grid {
+                        grid-template-columns: repeat(3, 1fr);
+                    }
+                }
+                @media (max-width: 768px) {
+                    .summary-grid {
+                        grid-template-columns: repeat(2, 1fr);
+                    }
+                }
+                @media (max-width: 576px) {
+                    .summary-grid {
+                        grid-template-columns: 1fr;
+                    }
+                }
         .btn-primary:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(59,130,246,0.3);
@@ -264,52 +373,60 @@
     </style>
 </head>
 <body>
+<div class="floating-banner">
+    <strong>Coming Soon</strong>
+    <span class="banner-subtitle">Portfolio Analyzer</span>
+    <span class="banner-highlight">Multi-file upload support</span>
+</div>
 <div class="container">
     <div class="dashboard-header">
         <h1>📊 Trading Statistics Dashboard</h1>
     </div>
     
     <div class="input-section">
-        <form id="inputForm" class="row g-3 align-items-end">
-            <div class="col-md-3">
+        <form id="inputForm" class="row g-2 align-items-end">
+            <div class="col-lg-2 col-md-2">
                 <label for="capital" class="form-label">💰 Capital Required</label>
                 <input type="number" class="form-control" id="capital" required>
             </div>
-            <div class="col-md-3">
+            <div class="col-lg-2 col-md-2">
                 <label for="brokerage" class="form-label">💵 Brokerage per Order</label>
                 <input type="number" class="form-control" id="brokerage" required>
             </div>
-            <div class="col-md-4">
-                <label for="csvFile" class="form-label">📁 Upload Trade File</label>
+            <div class="col-lg-2 col-md-2">
+                <label for="profitSharing" class="form-label">🤝 Profit Sharing %</label>
+                <input type="number" class="form-control" id="profitSharing" value="0" step="0.01" min="0" max="100">
+            </div>
+            <div class="col-lg-4 col-md-4">
+                <label for="csvFile" class="form-label">📁 Upload TradeTron File</label>
                 <input type="file" class="form-control" id="csvFile" accept=".csv,.xlsx,.xls" required>
             </div>
-            <div class="col-md-2">
+            <div class="col-lg-2 col-md-2">
                 <button type="submit" class="btn btn-primary w-100">Analyze</button>
             </div>
         </form>
     </div>
     
     <div id="results" style="display:none;">
-        <!-- Date Range and Day Filter -->
-        <div class="filter-section">
-            <div class="row align-items-end g-3">
-                <div class="col-md-3">
-                    <label class="form-label">📅 From</label>
-                    <input type="date" id="dateFrom" class="form-control">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">📅 To</label>
-                    <input type="date" id="dateTo" class="form-control">
-                </div>
-                <div class="col-md-3">
+        <div class="pnl-type-bar">
+            <div class="row align-items-end g-2 justify-content-end">
+                <div class="col-md-3 text-end">
                     <label class="form-label">📊 PnL Type</label>
                     <div class="btn-group w-100" role="group">
                         <button type="button" class="btn btn-outline-primary active" id="pnlNet" data-pnl="net">Net</button>
                         <button type="button" class="btn btn-outline-primary" id="pnlGross" data-pnl="gross">Gross</button>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label">🗓️ Day Filter</label>
+            </div>
+        </div>
+
+        <!-- Day and Month Filters -->
+        <div class="filter-section">
+            <input type="date" id="dateFrom" class="form-control" style="display:none;">
+            <input type="date" id="dateTo" class="form-control" style="display:none;">
+            <div class="row align-items-end g-2">
+                <div class="col-md-6">
+                    <label class="form-label text-center">🗓️ Day Filter</label>
                     <div class="btn-group w-100" role="group">
                         <button type="button" class="btn btn-outline-primary active" id="dayAll" data-day="All">All</button>
                         <button type="button" class="btn btn-outline-primary" id="dayMon" data-day="Mon">Mon</button>
@@ -319,53 +436,52 @@
                         <button type="button" class="btn btn-outline-primary" id="dayFri" data-day="Fri">Fri</button>
                     </div>
                 </div>
+                <div class="col-md-6">
+                    <label class="form-label text-center">📆 Month Filter</label>
+                    <div id="monthFilterContainer" class="btn-group w-100" role="group" style="flex-wrap: wrap;">
+                        <button type="button" class="btn btn-outline-primary active" id="monthAll" data-month="All">All</button>
+                    </div>
+                </div>
             </div>
         </div>
         
         <!-- Summary Cards -->
-        <div class="row g-3 mb-4">
-            <div class="col-lg-2 col-md-4 col-6">
-                <div class="summary-card">
-                    <small>Total Gross PnL</small>
-                    <h3 id="totalGrossPnlDisplay">-</h3>
-                    <small id="grossPnlCapital"></small>
-                </div>
+        <div class="summary-grid mb-3">
+            <div class="summary-card">
+                <small>Total Gross PnL</small>
+                <h3 id="totalGrossPnlDisplay">-</h3>
+                <small id="grossPnlCapital"></small>
             </div>
-            <div class="col-lg-2 col-md-4 col-6">
-                <div class="summary-card">
-                    <small>Total Brokerage</small>
-                    <h5 id="totalBrokerageDisplay">-</h5>
-                    <small id="brokerageBreakdown"></small><br>
-                    <small id="brokerageCapital"></small>
-                </div>
+            <div class="summary-card summary-expense">
+                <small>Total Brokerage</small>
+                <h5 id="totalBrokerageDisplay">-</h5>
+                <small id="brokerageBreakdown"></small><br>
+                <small id="brokerageCapital"></small>
             </div>
-            <div class="col-lg-2 col-md-4 col-6">
-                <div class="summary-card">
-                    <small>Total Taxes</small>
-                    <h3 id="totalTaxesDisplay">-</h3>
-                    <small id="taxesCapital"></small>
-                </div>
+            <div class="summary-card summary-expense">
+                <small>Total Taxes</small>
+                <h3 id="totalTaxesDisplay">-</h3>
+                <small id="taxesCapital"></small>
             </div>
-            <div class="col-lg-2 col-md-4 col-6">
-                <div class="summary-card">
-                    <small>Total Charges</small>
-                    <h3 id="totalChargesDisplay">-</h3>
-                    <small id="chargesCapital"></small>
-                </div>
+            <div class="summary-card summary-expense">
+                <small>Total Charges</small>
+                <h3 id="totalChargesDisplay">-</h3>
+                <small id="chargesCapital"></small>
             </div>
-            <div class="col-lg-2 col-md-4 col-6">
-                <div class="summary-card">
-                    <small>Total Net PnL</small>
-                    <h3 id="totalNetPnlDisplay">-</h3>
-                    <small id="netPnlCapital"></small>
-                </div>
+            <div class="summary-card summary-expense">
+                <small>Profit Sharing</small>
+                <h3 id="profitSharingDisplay">-</h3>
+                <small id="profitSharingCapital"></small>
             </div>
-            <div class="col-lg-2 col-md-4 col-6">
-                <div class="summary-card">
-                    <small>Gross to Net %</small>
-                    <h3 id="grossToNetPctDisplay">-</h3>
-                    <small id="grossToNetNote"></small>
-                </div>
+            <div class="summary-card summary-net">
+                <small>Total Net PnL</small>
+                <h3 id="totalNetPnlDisplay">-</h3>
+                <small id="netPnlCapital"></small>
+            </div>
+            <div class="summary-card">
+                <small>Gross to Net %</small>
+                <h3 id="grossToNetPctDisplay">-</h3>
+                <small id="grossToNetNote"></small>
             </div>
         </div>
         
@@ -391,6 +507,16 @@
         
         <div class="section-card">
             <h4 class="section-title">📈 Daily PnL Chart</h4>
+            <div class="mb-3" id="chartControlsContainer" style="display:none;">
+                <div class="row align-items-center">
+                    <div class="col-md-3">
+                        <label class="form-label" style="font-size:0.9rem;margin-bottom:4px;">Visible Days: <span id="visibleDaysLabel">30</span></label>
+                    </div>
+                    <div class="col-md-9">
+                        <input type="range" class="form-range" id="chartSlider" min="0" max="100" value="0" step="1">
+                    </div>
+                </div>
+            </div>
             <div style="position:relative;width:100%;height:400px;">
                 <canvas id="dailyPnlBarChart"></canvas>
             </div>

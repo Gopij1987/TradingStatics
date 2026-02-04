@@ -87,6 +87,10 @@ function renderMonthlyBreakup(monthlyMap, stats) {
     document.getElementById('monthlyBreakup').innerHTML = html;
 }
 // Daily PnL Bar Chart
+let chartSliderEnabled = false;
+let chartDataCache = null;
+const MAX_VISIBLE_DAYS = 30;
+
 function renderDailyPnlBarChart(dailyRows, capital, pnlType = 'net') {
     const canvas = document.getElementById('dailyPnlBarChart');
     if (!canvas) return;
@@ -95,10 +99,60 @@ function renderDailyPnlBarChart(dailyRows, capital, pnlType = 'net') {
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
         return;
     }
+    
+    // Cache the full data
+    chartDataCache = { dailyRows, capital, pnlType };
+    
+    // Determine if slider should be shown
+    const totalDays = dailyRows.length;
+    const controlsContainer = document.getElementById('chartControlsContainer');
+    
+    if (totalDays > MAX_VISIBLE_DAYS) {
+        chartSliderEnabled = true;
+        controlsContainer.style.display = 'block';
+        
+        // Setup slider if not already done
+        const slider = document.getElementById('chartSlider');
+        slider.max = totalDays - MAX_VISIBLE_DAYS;
+        slider.value = 0;
+        
+        // Remove previous event listeners to avoid duplicates
+        const newSlider = slider.cloneNode(true);
+        slider.parentNode.replaceChild(newSlider, slider);
+        
+        newSlider.addEventListener('input', function() {
+            updateChartFromSlider();
+        });
+        
+        updateChartFromSlider();
+    } else {
+        chartSliderEnabled = false;
+        controlsContainer.style.display = 'none';
+        renderChartWithData(dailyRows, capital, pnlType, 0, dailyRows.length);
+    }
+}
+
+function updateChartFromSlider() {
+    if (!chartDataCache) return;
+    
+    const slider = document.getElementById('chartSlider');
+    const startIndex = parseInt(slider.value);
+    const endIndex = Math.min(startIndex + MAX_VISIBLE_DAYS, chartDataCache.dailyRows.length);
+    
+    renderChartWithData(chartDataCache.dailyRows, chartDataCache.capital, chartDataCache.pnlType, startIndex, endIndex);
+}
+
+function renderChartWithData(dailyRows, capital, pnlType, startIndex, endIndex) {
+    const canvas = document.getElementById('dailyPnlBarChart');
+    const ctx = canvas.getContext('2d');
+    
     const usePnlField = pnlType === 'gross' ? 'grossPnl' : 'netPnl';
-    const labels = dailyRows.map(row => row.date.toLocaleDateString("en-IN"));
-    const data = dailyRows.map(row => row[usePnlField]);
-    const bgColors = dailyRows.map(row => row[usePnlField] >= 0 ? 'rgba(76,175,80,0.7)' : 'rgba(244,67,54,0.7)');
+    
+    // Slice data for visible range
+    const visibleRows = dailyRows.slice(startIndex, endIndex);
+    const labels = visibleRows.map(row => row.date.toLocaleDateString("en-IN"));
+    const data = visibleRows.map(row => row[usePnlField]);
+    const bgColors = visibleRows.map(row => row[usePnlField] >= 0 ? 'rgba(76,175,80,0.7)' : 'rgba(244,67,54,0.7)');
     
     // Calculate min/max for y1 axis scaling
     const minVal = Math.min(...data);
@@ -144,7 +198,7 @@ function renderDailyPnlBarChart(dailyRows, capital, pnlType = 'net') {
                     title: { display: true, text: 'Date' },
                     ticks: {
                         autoSkip: true,
-                        maxTicksLimit: dailyRows.length > 50 ? 10 : 20
+                        maxTicksLimit: visibleRows.length > 50 ? 10 : 20
                     }
                 },
                 y: { 
@@ -183,17 +237,22 @@ function renderMonthlyHeatmap(monthlyMap, capital) {
         yearMonthPnL[year][month] = pnl;
     });
     let html = '<div class="table-responsive"><table class="table table-bordered" style="text-align:center;">';
-    html += '<thead><tr><th>Year</th>' + months.map(m => `<th>${m}</th>`).join("") + '</tr></thead><tbody>';
+    html += '<thead><tr><th>Year</th>' + months.map(m => `<th>${m}</th>`).join("") + '<th>Total</th></tr></thead><tbody>';
     Object.keys(yearMonthPnL).sort().forEach(year => {
+        let yearTotal = 0;
         html += `<tr><td><strong>${year}</strong></td>`;
         for (let m = 1; m <= 12; m++) {
             const val = yearMonthPnL[year][m] || 0;
+            yearTotal += val;
             const pct = capital > 0 ? ((val / capital) * 100).toFixed(2) : 0;
             let bgColor = '#e0f7fa';
             if (val > 0) bgColor = '#c8e6c9';
             if (val < 0) bgColor = '#ffcdd2';
             html += `<td style="background:${bgColor};font-weight:600;">${val !== 0 ? Math.round(val) : '-'}<br><span style="font-size:0.85em;">(${pct}%)</span></td>`;
         }
+        const totalPct = capital > 0 ? ((yearTotal / capital) * 100).toFixed(2) : 0;
+        const totalColor = yearTotal > 0 ? 'green' : yearTotal < 0 ? 'red' : 'black';
+        html += `<td style="color:${totalColor};font-weight:700;">${yearTotal !== 0 ? Math.round(yearTotal) : '-'}<br><span style="font-size:0.85em;">(${totalPct}%)</span></td>`;
         html += '</tr>';
     });
     html += '</tbody></table></div>';
@@ -229,11 +288,13 @@ let globalAnalysis = null;
 let globalCapital = 0;
 let globalDailyRows = [];
 let globalPnlType = 'net'; // 'net' or 'gross'
+let globalProfitSharingPct = 0;
 
 // Function to parse CSV and run analysis
 function parseAndAnalyzeCSV(file) {
     const capital = Number(document.getElementById("capital").value);
     const brokeragePerSide = Number(document.getElementById("brokerage").value);
+    const profitSharingPct = Number(document.getElementById("profitSharing").value) || 0;
 
     // Check if file is Excel (.xlsx or .xls)
     if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls') || 
@@ -261,7 +322,7 @@ function parseAndAnalyzeCSV(file) {
                 console.log("Excel file parsed rows sample:", rows.slice(0, 2));
                 console.log("Column names:", Object.keys(rows[0] || {}));
                 
-                processData(rows, capital, brokeragePerSide);
+                processData(rows, capital, brokeragePerSide, profitSharingPct);
             } catch (error) {
                 console.error("Excel parse error:", error);
                 alert("Failed to parse Excel file: " + error.message);
@@ -275,7 +336,7 @@ function parseAndAnalyzeCSV(file) {
             skipEmptyLines: true,
             complete: (result) => {
                 console.log("CSV parsed rows sample:", result.data.slice(0, 2));
-                processData(result.data, capital, brokeragePerSide);
+                processData(result.data, capital, brokeragePerSide, profitSharingPct);
             },
             error: (error) => {
                 console.error("CSV parse error:", error);
@@ -285,7 +346,7 @@ function parseAndAnalyzeCSV(file) {
     }
 }
 
-function processData(rows, capital, brokeragePerSide) {
+function processData(rows, capital, brokeragePerSide, profitSharingPct) {
     // Filter out empty rows
     rows = rows.filter(row => {
         return row && Object.values(row).some(val => val !== null && val !== undefined && val !== '');
@@ -296,12 +357,13 @@ function processData(rows, capital, brokeragePerSide) {
         return;
     }
     
-    const analysis = analyzeTrades(rows, capital, brokeragePerSide);
+    const analysis = analyzeTrades(rows, capital, brokeragePerSide, profitSharingPct);
     
     // Store globally
     globalAnalysis = analysis;
     globalCapital = capital;
     globalDailyRows = analysis.dailyRows;
+    globalProfitSharingPct = profitSharingPct;
     
     // Set date range from data
     if (globalDailyRows.length > 0) {
@@ -311,6 +373,13 @@ function processData(rows, capital, brokeragePerSide) {
         
         document.getElementById("dateFrom").value = minDate.toISOString().split('T')[0];
         document.getElementById("dateTo").value = maxDate.toISOString().split('T')[0];
+        const dateRangeDisplay = document.getElementById("dateRangeDisplay");
+        if (dateRangeDisplay) {
+            dateRangeDisplay.textContent = `${minDate.toLocaleDateString("en-IN")} → ${maxDate.toLocaleDateString("en-IN")}`;
+        }
+        
+        // Populate month filter
+        populateMonthFilter(globalDailyRows);
     }
     
     console.log("DailyRows for Day Wise Breakup:", analysis.dailyRows);
@@ -328,6 +397,37 @@ function processData(rows, capital, brokeragePerSide) {
     
     // Setup filters
     setupDateFilters();
+}
+
+// Populate month filter with unique months from data
+function populateMonthFilter(dailyRows) {
+    const monthsSet = new Set();
+    dailyRows.forEach(row => {
+        if (row.date instanceof Date && !isNaN(row.date)) {
+            const year = row.date.getFullYear();
+            const month = row.date.getMonth() + 1;
+            const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+            monthsSet.add(monthKey);
+        }
+    });
+    
+    const months = Array.from(monthsSet).sort();
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    
+    const container = document.getElementById('monthFilterContainer');
+    container.innerHTML = '<button type="button" class="btn btn-outline-primary active" id="monthAll" data-month="All">All</button>';
+    
+    months.forEach(monthKey => {
+        const [year, monthNum] = monthKey.split('-');
+        const monthName = monthNames[parseInt(monthNum) - 1];
+        const label = `${monthName} ${year}`;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-outline-primary';
+        btn.setAttribute('data-month', monthKey);
+        btn.textContent = label;
+        container.appendChild(btn);
+    });
 }
 
 // Setup date and day filters
@@ -355,6 +455,28 @@ function setupDateFilters() {
             }
             applyFilters();
         });
+    });
+    
+    // Month toggle buttons (delegated event handling since they're dynamic)
+    document.getElementById('monthFilterContainer').addEventListener('click', function(e) {
+        if (e.target.tagName === 'BUTTON' && e.target.hasAttribute('data-month')) {
+            const monthValue = e.target.getAttribute('data-month');
+            const monthButtons = document.querySelectorAll('[data-month]');
+            
+            if (monthValue === 'All') {
+                monthButtons.forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+            } else {
+                const allBtn = document.querySelector('[data-month="All"]');
+                if (allBtn) allBtn.classList.remove('active');
+                e.target.classList.toggle('active');
+                const anyMonthActive = Array.from(monthButtons).some(b => b.getAttribute('data-month') !== 'All' && b.classList.contains('active'));
+                if (!anyMonthActive && allBtn) {
+                    allBtn.classList.add('active');
+                }
+            }
+            applyFilters();
+        }
     });
     
     // PnL type toggle buttons
@@ -385,23 +507,39 @@ function applyFilters() {
     document.querySelectorAll('[data-day].active').forEach(btn => {
         selectedDays.push(btn.getAttribute('data-day'));
     });
-    const isAllSelected = selectedDays.includes('All');
-    const effectiveDays = isAllSelected ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'] : selectedDays;
+    const isAllDaysSelected = selectedDays.includes('All');
+    const effectiveDays = isAllDaysSelected ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'] : selectedDays;
+    
+    // Get selected months
+    const selectedMonths = [];
+    document.querySelectorAll('[data-month].active').forEach(btn => {
+        selectedMonths.push(btn.getAttribute('data-month'));
+    });
+    const isAllMonthsSelected = selectedMonths.includes('All');
     
     // Filter daily rows
     const filteredRows = globalDailyRows.filter(row => {
         const dateMatch = row.date >= dateFrom && row.date <= dateTo;
         const dayName = row.date.toLocaleDateString('en-US', { weekday: 'short' });
         const dayMatch = effectiveDays.includes(dayName);
-        return dateMatch && dayMatch;
+        
+        let monthMatch = true;
+        if (!isAllMonthsSelected && selectedMonths.length > 0) {
+            const year = row.date.getFullYear();
+            const month = row.date.getMonth() + 1;
+            const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+            monthMatch = selectedMonths.includes(monthKey);
+        }
+        
+        return dateMatch && dayMatch && monthMatch;
     });
     
     // Recalculate statistics from filtered data
-    const filteredAnalysis = recalculateStats(filteredRows, globalCapital, globalPnlType);
+    const filteredAnalysis = recalculateStats(filteredRows, globalCapital, globalPnlType, globalProfitSharingPct);
     
-    // Re-render
-    renderSummary(globalAnalysis, globalCapital);
-    renderTaxBreakdown(globalAnalysis, globalCapital, 'net');
+    // Re-render with filtered data
+    renderSummary(filteredAnalysis, globalCapital);
+    renderTaxBreakdown(filteredAnalysis, globalCapital, globalPnlType);
     renderStats(filteredAnalysis.stats, globalCapital, filteredAnalysis.winDays, filteredAnalysis.lossDays);
     renderDayWiseBreakup(filteredRows, globalCapital, globalPnlType);
     renderMonthlyHeatmap(filteredAnalysis.monthlyMap, globalCapital);
@@ -410,7 +548,7 @@ function applyFilters() {
 }
 
 // Recalculate statistics from filtered daily rows
-function recalculateStats(dailyRows, capital, pnlType = 'net') {
+function recalculateStats(dailyRows, capital, pnlType = 'net', profitSharingPct = 0) {
     const totalDays = dailyRows.length;
     const totalGross = dailyRows.reduce((sum, row) => sum + row.grossPnl, 0);
     const totalBrokerage = dailyRows.reduce((sum, row) => sum + row.brokerage, 0);
@@ -420,6 +558,7 @@ function recalculateStats(dailyRows, capital, pnlType = 'net') {
     const totalIpftCharge = dailyRows.reduce((sum, row) => sum + row.ipftCharge, 0);
     const totalGst = dailyRows.reduce((sum, row) => sum + row.gst, 0);
     const totalCharges = dailyRows.reduce((sum, row) => sum + row.totalCost, 0);
+    const totalProfitSharing = dailyRows.reduce((sum, row) => sum + (row.profitSharing || 0), 0);
     const totalNet = dailyRows.reduce((sum, row) => sum + row.netPnl, 0);
     
     // Choose PnL based on type
@@ -521,7 +660,8 @@ function recalculateStats(dailyRows, capital, pnlType = 'net') {
         totalSebiCharge,
         totalIpftCharge,
         totalGst,
-        totalGrossPnl: totalGross
+        totalGrossPnl: totalGross,
+        totalProfitSharing
     };
 }
 
@@ -565,7 +705,7 @@ form.addEventListener("submit", (event) => {
     parseAndAnalyzeCSV(file);
 });
 
-function analyzeTrades(rows, capital, brokeragePerSide) {
+function analyzeTrades(rows, capital, brokeragePerSide, profitSharingPct) {
     const dailyMap = new Map();
     let totalGrossPnl = 0;
     let totalTrades = 0;
@@ -640,6 +780,9 @@ function analyzeTrades(rows, capital, brokeragePerSide) {
     
     const totalTax = totalStt + totalTransactionCharge + totalSebiCharge + totalIpftCharge + totalGst;
     const totalCharges = totalBrokerage + totalTax;
+    
+    // Calculate profit sharing from gross PnL
+    const totalProfitSharing = (profitSharingPct / 100) * totalGrossPnl;
 
     const dailyRows = Array.from(dailyMap.values())
         .sort((a, b) => a.date - b.date)
@@ -647,6 +790,8 @@ function analyzeTrades(rows, capital, brokeragePerSide) {
             // Distribute charges proportionally
             const entryTrades = entry.trades;
             const brokeragePercentage = totalTrades > 0 ? entryTrades / totalTrades : 0;
+            const entryCost = (totalBrokerage + totalTax) * brokeragePercentage;
+            const entryProfitSharing = totalProfitSharing * brokeragePercentage;
             
             return {
                 date: entry.date,
@@ -657,8 +802,9 @@ function analyzeTrades(rows, capital, brokeragePerSide) {
                 sebiCharge: totalSebiCharge * brokeragePercentage,
                 ipftCharge: totalIpftCharge * brokeragePercentage,
                 gst: totalGst * brokeragePercentage,
-                totalCost: (totalBrokerage + totalTax) * brokeragePercentage,
-                netPnl: entry.grossPnl - ((totalBrokerage + totalTax) * brokeragePercentage),
+                totalCost: entryCost,
+                profitSharing: entryProfitSharing,
+                netPnl: entry.grossPnl - entryCost - entryProfitSharing,
                 trades: entryTrades
             };
         });
@@ -746,7 +892,7 @@ function analyzeTrades(rows, capital, brokeragePerSide) {
         { name: "Max Losing Streak", value: `${maxLossStreak} Days` }
     ];
 
-    return { stats, dailyRows, monthlyMap, winDays, lossDays, totalNet, totalBrokerage: totalBrokerage, totalCharges: totalCharges, totalStt, totalTransactionCharge, totalSebiCharge, totalIpftCharge, totalGst, totalGrossPnl };
+    return { stats, dailyRows, monthlyMap, winDays, lossDays, totalNet, totalBrokerage: totalBrokerage, totalCharges: totalCharges, totalStt, totalTransactionCharge, totalSebiCharge, totalIpftCharge, totalGst, totalGrossPnl, totalProfitSharing };
 }
 
 function calculateMaxDrawdown(dailyRows, capital, pnlType = 'net') {
@@ -788,6 +934,10 @@ function renderSummary(analysis, capital) {
     document.getElementById("totalChargesDisplay").textContent = currency.format(analysis.totalCharges);
     const chargesPct = capital > 0 ? ((analysis.totalCharges / capital) * 100).toFixed(2) : "0.00";
     document.getElementById("chargesCapital").textContent = `(${chargesPct}%)`;
+    
+    document.getElementById("profitSharingDisplay").textContent = currency.format(analysis.totalProfitSharing || 0);
+    const profitSharingPct = capital > 0 ? ((analysis.totalProfitSharing / capital) * 100).toFixed(2) : "0.00";
+    document.getElementById("profitSharingCapital").textContent = `(${profitSharingPct}%)`;
     
     document.getElementById("totalNetPnlDisplay").textContent = currency.format(analysis.totalNet);
     const netPct = capital > 0 ? ((analysis.totalNet / capital) * 100).toFixed(2) : "0.00";
@@ -895,7 +1045,9 @@ function renderDailySummary(dailyRows) {
     const rows = sortedRows.map((row) => {
         const netPnlColor = row.netPnl >= 0 ? 'green' : 'red';
         const otherCharges = row.transactionCharge + row.sebiCharge + row.ipftCharge + row.stt + row.gst;
-        const costPctValue = row.grossPnl !== 0 ? (row.totalCost / Math.abs(row.grossPnl)) * 100 : 0;
+        const profitSharing = row.profitSharing || 0;
+        const totalDeductions = row.totalCost + profitSharing;
+        const costPctValue = row.grossPnl !== 0 ? (totalDeductions / Math.abs(row.grossPnl)) * 100 : 0;
         const costPctText = costPctValue.toFixed(2);
         const barWidth = Math.min(costPctValue, 100);
         const barColor = costPctValue > 100 ? '#dc2626' : '#3b82f6';
@@ -908,6 +1060,7 @@ function renderDailySummary(dailyRows) {
                 <td>${currency.format(row.brokerage)}</td>
                 <td>${currency.format(otherCharges)}</td>
                 <td>${currency.format(row.totalCost)}</td>
+                <td>${currency.format(profitSharing)}</td>
                 <td>
                     <div style="font-weight:600;">${costPctText}%</div>
                     <div style="height:6px;background:#e5e7eb;border-radius:4px;overflow:hidden;margin-top:4px;">
@@ -930,7 +1083,8 @@ function renderDailySummary(dailyRows) {
                     <th>Brokerage</th>
                     <th>Other Charges</th>
                     <th>Total Cost</th>
-                    <th>Cost % to PnL</th>
+                    <th>Profit Sharing</th>
+                    <th>Total Deductions %</th>
                     <th>Net PnL</th>
                     <th>Trades</th>
                 </tr>
