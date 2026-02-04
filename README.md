@@ -64,7 +64,10 @@ A professional **web-based trading analysis tool** that helps traders analyze th
 ```
 trading-dashboard/
 ├── index.html        # Main dashboard UI
-├── dashboard.js      # All business logic
+├── assets/
+│   └── js/
+│       └── dashboard.js   # All business logic
+├── samples/          # Sample data files (ignored by git)
 └── README.md         # This file
 ```
 
